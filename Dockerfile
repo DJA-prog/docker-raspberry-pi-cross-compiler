@@ -1,57 +1,57 @@
-FROM debian:jessie
+# Use ARM32v6 Debian Bullseye as base - compatible with Raspberry Pi Zero W (ARMv6)
+FROM balenalib/raspberry-pi-debian:bullseye
 
+# Install build tools and development libraries (ARM versions by default)
 RUN apt-get update \
- && DEBIAN_FRONTEND=noninteractive apt-get install -y apt-utils \
- && DEBIAN_FRONTEND=noninteractive dpkg-reconfigure apt-utils \
  && DEBIAN_FRONTEND=noninteractive apt-get install -y \
+        apt-utils \
         automake \
+        build-essential \
         cmake \
         curl \
         fakeroot \
         g++ \
+        gcc \
         git \
         make \
+        pkg-config \
         runit \
         sudo \
-        xz-utils
+        symlinks \
+        xz-utils \
+        libboost-system-dev \
+        libboost-iostreams-dev \
+        libboost-filesystem-dev \
+        libssl-dev \
+        libcurl4-openssl-dev \
+        zlib1g-dev \
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/*
 
-# Here is where we hardcode the toolchain decision.
+# Set up cross-compilation environment variables
 ENV HOST=arm-linux-gnueabihf \
-    TOOLCHAIN=gcc-linaro-arm-linux-gnueabihf-raspbian-x64 \
-    RPXC_ROOT=/rpxc
-
-#    TOOLCHAIN=arm-rpi-4.9.3-linux-gnueabihf \
-#    TOOLCHAIN=gcc-linaro-arm-linux-gnueabihf-raspbian-x64 \
-
-WORKDIR $RPXC_ROOT
-RUN curl -L https://github.com/raspberrypi/tools/tarball/master \
-  | tar --wildcards --strip-components 3 -xzf - "*/arm-bcm2708/$TOOLCHAIN/"
-
-ENV ARCH=arm \
-    CROSS_COMPILE=$RPXC_ROOT/bin/$HOST- \
-    PATH=$RPXC_ROOT/bin:$PATH \
+    RPXC_ROOT=/rpxc \
+    ARCH=arm \
     QEMU_PATH=/usr/bin/qemu-arm-static \
-    QEMU_EXECVE=1 \
-    SYSROOT=$RPXC_ROOT/sysroot
+    QEMU_EXECVE=1
 
-WORKDIR $SYSROOT
-RUN curl -Ls https://github.com/sdhibit/docker-rpi-raspbian/raw/master/raspbian.2015.05.05.tar.xz \
-    | tar -xJf - \
- && curl -Ls https://github.com/resin-io-projects/armv7hf-debian-qemu/raw/master/bin/qemu-arm-static \
-    > $SYSROOT/$QEMU_PATH \
- && chmod +x $SYSROOT/$QEMU_PATH \
- && mkdir -p $SYSROOT/build \
- && chroot $SYSROOT $QEMU_PATH /bin/sh -c '\
-        echo "deb http://archive.raspbian.org/raspbian jessie firmware" \
-            >> /etc/apt/sources.list \
-        && apt-get update \
-        && DEBIAN_FRONTEND=noninteractive apt-get install -y apt-utils \
-        && DEBIAN_FRONTEND=noninteractive dpkg-reconfigure apt-utils \
-        && DEBIAN_FRONTEND=noninteractive apt-get upgrade -y \
-        && DEBIAN_FRONTEND=noninteractive apt-get install -y \
-                libc6-dev \
-                symlinks \
-        && symlinks -cors /'
+# Create necessary directories
+RUN mkdir -p $RPXC_ROOT/bin \
+ && mkdir -p /build
+
+# Set up symbolic links for cross-compilation tools
+# Since we're running ARM natively in QEMU, we just point to the native tools
+RUN ln -s /usr/bin/gcc $RPXC_ROOT/bin/${HOST}-gcc \
+ && ln -s /usr/bin/g++ $RPXC_ROOT/bin/${HOST}-g++ \
+ && ln -s /usr/bin/ar $RPXC_ROOT/bin/${HOST}-ar \
+ && ln -s /usr/bin/as $RPXC_ROOT/bin/${HOST}-as \
+ && ln -s /usr/bin/ld $RPXC_ROOT/bin/${HOST}-ld \
+ && ln -s /usr/bin/ranlib $RPXC_ROOT/bin/${HOST}-ranlib \
+ && ln -s /usr/bin/strip $RPXC_ROOT/bin/${HOST}-strip
+
+ENV CROSS_COMPILE=$RPXC_ROOT/bin/$HOST- \
+    PATH=$RPXC_ROOT/bin:$PATH \
+    SYSROOT=/
 
 COPY image/ /
 

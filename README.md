@@ -1,11 +1,17 @@
-[![CircleCI](https://circleci.com/gh/sdt/docker-raspberry-pi-cross-compiler.svg?style=svg)](https://circleci.com/gh/sdt/docker-raspberry-pi-cross-compiler)
 # Raspberry Pi Cross-Compiler in a Docker Container
 
-An easy-to-use  all-in-one cross compiler for the Raspberry Pi.
+An easy-to-use all-in-one cross compiler for the Raspberry Pi, modernized with current toolchains and libraries.
 
-This project is available as [sdthirlwall/raspberry-pi-cross-compiler](https://registry.hub.docker.com/u/sdthirlwall/raspberry-pi-cross-compiler/) on [Docker Hub](https://hub.docker.com/), and as [sdt/docker-raspberry-pi-cross-compiler](https://github.com/sdt/docker-raspberry-pi-cross-compiler) on [GitHub](https://github.com).
+**Forked and updated** from [sdt/docker-raspberry-pi-cross-compiler](https://github.com/sdt/docker-raspberry-pi-cross-compiler)
 
-Please raise any issues on the [GitHub issue tracker](https://github.com/sdt/docker-raspberry-pi-cross-compiler/issues) as I don't get notified about Docker Hub comments.
+This modernized version uses:
+- **ARMv6** compatible base (Raspberry Pi Zero W, Pi 1, and all newer models)
+- **Debian Bullseye** (instead of outdated Jessie from 2015)
+- **GCC 10.2.1** (instead of old Linaro toolchain)
+- **CMake 3.18.4** (instead of 2.8)
+- Modern development libraries (Boost 1.74, OpenSSL 1.1.1, etc.)
+
+Perfect for building modern C++ projects like `tgbot-cpp` that require recent toolchains.
 
 ## Contents
 
@@ -18,10 +24,13 @@ Please raise any issues on the [GitHub issue tracker](https://github.com/sdt/doc
 
 ## Features
 
-* The [gcc-linaro-arm-linux-gnueabihf-raspbian-x64 toolchain](https://github.com/raspberrypi/tools/tree/master/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian-x64) from [raspberrypi/tools](https://github.com/raspberrypi/tools)
-* Raspbian sysroot from [sdhibit/docker-rpi-raspbian](https://github.com/sdhibit/docker-rpi-raspbian) :new:
-* Easy installation of raspbian packages into the sysroot using the [customised qemu arm emulator](https://resin.io/blog/building-arm-containers-on-any-x86-machine-even-dockerhub/) from [resin-io-projects/armv7hf-debian-qemu](https://github.com/resin-io-projects/armv7hf-debian-qemu) :new:
-* Easy-to-use front end wrapper program `rpxc`.
+* **ARMv6 compatible** - Works on Raspberry Pi Zero W, Pi 1, and all newer models
+* **Modern toolchain** - GCC 10.2.1 with Raspberry Pi optimizations
+* **CMake 3.18.4** - Build modern C++ projects that require CMake >= 3.10
+* **Current libraries** - Boost 1.74, OpenSSL 1.1.1, libcurl, zlib
+* **Debian Bullseye base** - Using official Balena Raspberry Pi image
+* **QEMU emulation** - Runs ARM binaries on x86 hosts transparently
+* **Easy-to-use wrapper** - Simple `rpxc` command to run any build tool
 
 ## Installation
 
@@ -29,10 +38,15 @@ This image is not intended to be run manually. Instead, there is a helper script
 
 To install the helper script, run the image with no arguments, and redirect the output to a file.
 
-eg.
-```
-docker run sdthirlwall/raspberry-pi-cross-compiler > ~/bin/rpxc
+```bash
+mkdir -p ~/bin
+docker run djaprog/raspberry-pi-cross-compiler > ~/bin/rpxc
 chmod +x ~/bin/rpxc
+```
+
+Optionally, add `~/bin` to your PATH in `~/.bashrc`:
+```bash
+export PATH="$HOME/bin:$PATH"
 ```
 
 ## Usage
@@ -53,13 +67,13 @@ To force a command to run inside the container (in case of a name clash with a b
 
 `rpxc install-debian [--update] package packages...`
 
-Install native packages into the docker image. Changes are committed back to the sdthirlwall/raspberry-pi-cross-compiler image.
+Install native packages into the docker image. Changes are committed back to the djaprog/raspberry-pi-cross-compiler image.
 
 #### install-raspbian
 
 `rpxc install-raspbian [--update] package packages...`
 
-Install raspbian packages from the raspbian repositories into the sysroot of thedocker image. Changes are committed back to the sdthirlwall/raspberry-pi-cross-compiler image.
+Install raspbian packages from the raspbian repositories into the sysroot of the docker image. Changes are committed back to the djaprog/raspberry-pi-cross-compiler image.
 
 #### update-image
 
@@ -95,7 +109,7 @@ Default: `~/.rpxc`
 
 The docker image to run.
 
-Default: sdthirlwall/raspberry-pi-cross-compiler
+Default: djaprog/raspberry-pi-cross-compiler
 
 ### RPXC_ARGS / --args &lt;docker-run-args&gt;
 
@@ -108,13 +122,13 @@ Using `rpxc install-debian` and `rpxc install-raspbian` are really only intended
 ### Create a Dockerfile
 
 ```Dockerfile
-FROM sdthirlwall/raspberry-pi-cross-compiler
+FROM djaprog/raspberry-pi-cross-compiler
 
 # Install some native build-time tools
 RUN install-debian scons
 
-# Install raspbian development libraries
-RUN install-raspbian libboost-dev-all
+# Install additional raspbian development libraries
+RUN install-raspbian libboost-thread-dev
 ```
 
 ### Name your image with an RPXC_IMAGE variable and build the image
