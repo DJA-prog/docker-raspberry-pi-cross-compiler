@@ -1,17 +1,17 @@
-# Use ARM32v6 Debian Bullseye as base - compatible with Raspberry Pi Zero W (ARMv6)
-FROM balenalib/raspberry-pi-debian:bullseye
+# Use x86_64 Debian Bullseye as base for cross-compilation
+FROM debian:bullseye
 
-# Install build tools and development libraries (ARM versions by default)
-RUN apt-get update \
+# Install build tools and ARM cross-compiler
+RUN dpkg --add-architecture armhf \
+ && apt-get update \
  && DEBIAN_FRONTEND=noninteractive apt-get install -y \
         apt-utils \
         automake \
         build-essential \
         cmake \
+        crossbuild-essential-armhf \
         curl \
         fakeroot \
-        g++ \
-        gcc \
         git \
         make \
         pkg-config \
@@ -19,12 +19,13 @@ RUN apt-get update \
         sudo \
         symlinks \
         xz-utils \
-        libboost-system-dev \
-        libboost-iostreams-dev \
-        libboost-filesystem-dev \
-        libssl-dev \
-        libcurl4-openssl-dev \
-        zlib1g-dev \
+        # ARM development libraries
+        libboost-system-dev:armhf \
+        libboost-iostreams-dev:armhf \
+        libboost-filesystem-dev:armhf \
+        libssl-dev:armhf \
+        libcurl4-openssl-dev:armhf \
+        zlib1g-dev:armhf \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
@@ -32,26 +33,23 @@ RUN apt-get update \
 ENV HOST=arm-linux-gnueabihf \
     RPXC_ROOT=/rpxc \
     ARCH=arm \
-    QEMU_PATH=/usr/bin/qemu-arm-static \
-    QEMU_EXECVE=1
+    CROSS_COMPILE=arm-linux-gnueabihf- \
+    CC=arm-linux-gnueabihf-gcc \
+    CXX=arm-linux-gnueabihf-g++ \
+    SYSROOT=/usr/arm-linux-gnueabihf
 
-# Create necessary directories
+# Create necessary directories and symlinks
 RUN mkdir -p $RPXC_ROOT/bin \
- && mkdir -p /build
+ && mkdir -p /build \
+ && ln -sf /usr/bin/arm-linux-gnueabihf-gcc $RPXC_ROOT/bin/arm-linux-gnueabihf-gcc \
+ && ln -sf /usr/bin/arm-linux-gnueabihf-g++ $RPXC_ROOT/bin/arm-linux-gnueabihf-g++ \
+ && ln -sf /usr/bin/arm-linux-gnueabihf-ar $RPXC_ROOT/bin/arm-linux-gnueabihf-ar \
+ && ln -sf /usr/bin/arm-linux-gnueabihf-as $RPXC_ROOT/bin/arm-linux-gnueabihf-as \
+ && ln -sf /usr/bin/arm-linux-gnueabihf-ld $RPXC_ROOT/bin/arm-linux-gnueabihf-ld \
+ && ln -sf /usr/bin/arm-linux-gnueabihf-ranlib $RPXC_ROOT/bin/arm-linux-gnueabihf-ranlib \
+ && ln -sf /usr/bin/arm-linux-gnueabihf-strip $RPXC_ROOT/bin/arm-linux-gnueabihf-strip
 
-# Set up symbolic links for cross-compilation tools
-# Since we're running ARM natively in QEMU, we just point to the native tools
-RUN ln -s /usr/bin/gcc $RPXC_ROOT/bin/${HOST}-gcc \
- && ln -s /usr/bin/g++ $RPXC_ROOT/bin/${HOST}-g++ \
- && ln -s /usr/bin/ar $RPXC_ROOT/bin/${HOST}-ar \
- && ln -s /usr/bin/as $RPXC_ROOT/bin/${HOST}-as \
- && ln -s /usr/bin/ld $RPXC_ROOT/bin/${HOST}-ld \
- && ln -s /usr/bin/ranlib $RPXC_ROOT/bin/${HOST}-ranlib \
- && ln -s /usr/bin/strip $RPXC_ROOT/bin/${HOST}-strip
-
-ENV CROSS_COMPILE=$RPXC_ROOT/bin/$HOST- \
-    PATH=$RPXC_ROOT/bin:$PATH \
-    SYSROOT=/
+ENV PATH=$RPXC_ROOT/bin:$PATH
 
 COPY image/ /
 
