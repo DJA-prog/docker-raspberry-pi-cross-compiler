@@ -221,7 +221,7 @@ docker run -i -t --rm \
 #
 #   To install the rpxc helper, run the following commands:
 #
-#       docker run sdthirlwall/raspberry-pi-cross-compiler > rpxc
+#       docker run djaprog/raspberry-pi-cross-compiler > rpxc
 #       chmod +x rpxc
 #
 #   You may then wish to move rpxc to somewhere in your path.
