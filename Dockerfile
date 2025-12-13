@@ -32,17 +32,21 @@ RUN dpkg --add-architecture armhf \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
-# Install WiringPi from pre-built package
-RUN curl -L https://github.com/WiringPi/WiringPi/releases/download/3.16/wiringpi_3.16_armhf.deb \
-    -o /tmp/wiringpi.deb \
- && dpkg-deb -x /tmp/wiringpi.deb /tmp/wiringpi \
+# Build WiringPi from source with cross-compiler to match glibc
+RUN git clone --depth 1 --branch 3.16 https://github.com/WiringPi/WiringPi.git /tmp/WiringPi \
+ && cd /tmp/WiringPi/wiringPi \
+ && make CC=arm-linux-gnueabihf-gcc AR=arm-linux-gnueabihf-ar RANLIB=arm-linux-gnueabihf-ranlib \
  && mkdir -p /usr/arm-linux-gnueabihf/include /usr/arm-linux-gnueabihf/lib \
- && cp -r /tmp/wiringpi/usr/include/* /usr/arm-linux-gnueabihf/include/ 2>/dev/null || true \
- && cp /tmp/wiringpi/usr/lib/libwiringPi.so.* /usr/arm-linux-gnueabihf/lib/ 2>/dev/null || true \
- && cp /tmp/wiringpi/usr/lib/libwiringPiDev.so.* /usr/arm-linux-gnueabihf/lib/ 2>/dev/null || true \
+ && cp *.h /usr/arm-linux-gnueabihf/include/ \
+ && cp libwiringPi.so.* /usr/arm-linux-gnueabihf/lib/ \
  && cd /usr/arm-linux-gnueabihf/lib \
- && ln -sf libwiringPi.so.3.16 libwiringPi.so \
- && ln -sf libwiringPiDev.so.3.16 libwiringPiDev.so \
+ && ln -sf libwiringPi.so.* libwiringPi.so \
+ && cd /tmp/WiringPi/devLib \
+ && make CC=arm-linux-gnueabihf-gcc AR=arm-linux-gnueabihf-ar RANLIB=arm-linux-gnueabihf-ranlib \
+ && cp *.h /usr/arm-linux-gnueabihf/include/ \
+ && cp libwiringPiDev.so.* /usr/arm-linux-gnueabihf/lib/ \
+ && cd /usr/arm-linux-gnueabihf/lib \
+ && ln -sf libwiringPiDev.so.* libwiringPiDev.so \
  && mkdir -p /usr/lib /usr/local/lib /opt/vc/lib \
  && ln -sf /usr/arm-linux-gnueabihf/lib/libwiringPi.so /usr/lib/libwiringPi.so \
  && ln -sf /usr/arm-linux-gnueabihf/lib/libwiringPiDev.so /usr/lib/libwiringPiDev.so \
@@ -50,7 +54,7 @@ RUN curl -L https://github.com/WiringPi/WiringPi/releases/download/3.16/wiringpi
  && ln -sf /usr/arm-linux-gnueabihf/lib/libwiringPiDev.so /usr/local/lib/libwiringPiDev.so \
  && ln -sf /usr/arm-linux-gnueabihf/lib/libwiringPi.so /opt/vc/lib/libwiringPi.so \
  && ln -sf /usr/arm-linux-gnueabihf/lib/libwiringPiDev.so /opt/vc/lib/libwiringPiDev.so \
- && rm -rf /tmp/wiringpi /tmp/wiringpi.deb
+ && rm -rf /tmp/WiringPi
 
 # Build and install pigpio library
 RUN git clone https://github.com/joan2937/pigpio.git /tmp/pigpio \
@@ -102,6 +106,10 @@ ENV PATH=$RPXC_ROOT/bin:$PATH
 
 COPY image/ /
 COPY tgbot-cpp/ /
+
+# Link tgbot-cpp to ARM sysroot for cross-compilation
+RUN ln -sf /usr/local/include/tgbot /usr/arm-linux-gnueabihf/include/tgbot \
+ && ln -sf /usr/local/lib/libTgBot.* /usr/arm-linux-gnueabihf/lib/ 2>/dev/null || true
 
 WORKDIR /build
 ENTRYPOINT [ "/rpxc/entrypoint.sh" ]
