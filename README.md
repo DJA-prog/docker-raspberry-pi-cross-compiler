@@ -10,6 +10,15 @@ This modernized version uses:
 - **GCC 10.2.1** (instead of old Linaro toolchain)
 - **CMake 3.18.4** (instead of 2.8)
 - Modern development libraries (Boost 1.74, OpenSSL 1.1.1, etc.)
+- **Pre-installed libraries**:
+  - **tgbot-cpp** - Telegram Bot API C++ library
+  - **WiringPi 3.16** - GPIO library (built from source)
+  - **pigpio** - GPIO library with daemon interface
+  - **Crow** - C++ microframework for web services
+  - **SQLite3** - Embedded database
+  - **Boost** (system, iostreams, filesystem)
+  - **OpenSSL, libcurl, zlib**
+  - **ASIO** - Asynchronous I/O library
 
 Perfect for building modern C++ projects like `tgbot-cpp` that require recent toolchains.
 
@@ -27,8 +36,11 @@ Perfect for building modern C++ projects like `tgbot-cpp` that require recent to
 * **ARMv6 compatible** - Works on Raspberry Pi Zero W, Pi 1, and all newer models
 * **Modern toolchain** - GCC 10.2.1 with Raspberry Pi optimizations
 * **CMake 3.18.4** - Build modern C++ projects that require CMake >= 3.10
-* **Current libraries** - Boost 1.74, OpenSSL 1.1.1, libcurl, zlib
-* **Debian Bullseye base** - Using official Balena Raspberry Pi image
+* **Current libraries** - Boost 1.74, OpenSSL 1.1.1, libcurl, zlib, SQLite3
+* **GPIO Libraries** - WiringPi 3.16 and pigpio (built from source for compatibility)
+* **Web Framework** - Crow header-only C++ microframework with ASIO
+* **Telegram Bot** - tgbot-cpp library pre-installed and ready to use
+* **Debian Bullseye base** - Using official Debian ARM packages
 * **QEMU emulation** - Runs ARM binaries on x86 hosts transparently
 * **Easy-to-use wrapper** - Simple `rpxc` command to run any build tool
 
@@ -161,3 +173,49 @@ And call it as `rpxc ./mymake.sh`
 ## Examples
 
 See the [examples directory](https://github.com/sdt/docker-raspberry-pi-cross-compiler/tree/master/example) for some real examples.
+
+## Pre-installed Libraries
+
+The following libraries are built and installed in the cross-compilation environment:
+
+### GPIO Libraries
+- **WiringPi 3.16** - Built from source with ARM cross-compiler
+  - Headers: `/usr/arm-linux-gnueabihf/include/wiringPi*.h`
+  - Libraries: `/usr/arm-linux-gnueabihf/lib/libwiringPi.so`, `libwiringPiDev.so`
+  
+- **pigpio** - GPIO library with daemon interface
+  - Headers: `/usr/arm-linux-gnueabihf/include/pigpio*.h`
+  - Libraries: `/usr/arm-linux-gnueabihf/lib/libpigpio.so`, `libpigpiod_if.so`, `libpigpiod_if2.so`
+
+### Communication & Web
+- **tgbot-cpp** - Telegram Bot API C++ library
+  - Headers: `/usr/local/include/tgbot/`
+  - Libraries: `/usr/local/lib/libTgBot.*`
+
+- **Crow** - C++ microframework for web services
+  - Headers: `/usr/local/include/crow/`
+  - Header-only library with ASIO dependency
+
+### Database
+- **SQLite3** - Embedded SQL database
+  - Debian package: `libsqlite3-dev:armhf`
+
+### Core Libraries
+- **Boost 1.74** - system, iostreams, filesystem modules (armhf)
+- **OpenSSL 1.1.1** - Cryptography and SSL/TLS (armhf)
+- **libcurl** - HTTP client library (armhf)
+- **zlib** - Compression library (armhf)
+- **ASIO** - Asynchronous I/O C++ library
+
+## Building Projects
+
+For CMake-based projects, use the ARM cross-compiler:
+
+```bash
+rpxc bash -c "mkdir -p build && cd build && cmake -DCMAKE_C_COMPILER=arm-linux-gnueabihf-gcc -DCMAKE_CXX_COMPILER=arm-linux-gnueabihf-g++ .. && make"
+```
+
+The compiler will automatically find libraries in:
+- `/usr/arm-linux-gnueabihf/lib` - ARM libraries
+- `/usr/local/lib` - Additional libraries
+- `/usr/lib` - System libraries
