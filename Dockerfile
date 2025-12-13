@@ -1,6 +1,13 @@
 # Use x86_64 Debian Bullseye as base for cross-compilation
 FROM debian:bullseye
 
+# Build arguments for optional library installation
+ARG INSTALL_WIRINGPI=true
+ARG INSTALL_PIGPIO=true
+ARG INSTALL_CROW=true
+ARG INSTALL_SQLITE=true
+ARG INSTALL_TGBOT=true
+
 # Install build tools and ARM cross-compiler
 RUN dpkg --add-architecture armhf \
  && apt-get update \
@@ -26,14 +33,18 @@ RUN dpkg --add-architecture armhf \
         libssl-dev:armhf \
         libcurl4-openssl-dev:armhf \
         zlib1g-dev:armhf \
-        libsqlite3-dev:armhf \
-        # Crow dependencies
-        libasio-dev \
+ && if [ "$INSTALL_SQLITE" = "true" ]; then \
+        apt-get install -y libsqlite3-dev:armhf; \
+    fi \
+ && if [ "$INSTALL_CROW" = "true" ]; then \
+        apt-get install -y libasio-dev; \
+    fi \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
 # Build WiringPi from source with cross-compiler to match glibc
-RUN git clone --depth 1 --branch 3.16 https://github.com/WiringPi/WiringPi.git /tmp/WiringPi \
+RUN if [ "$INSTALL_WIRINGPI" = "true" ]; then \
+    git clone --depth 1 --branch 3.16 https://github.com/WiringPi/WiringPi.git /tmp/WiringPi \
  && cd /tmp/WiringPi/wiringPi \
  && make CC=arm-linux-gnueabihf-gcc AR=arm-linux-gnueabihf-ar RANLIB=arm-linux-gnueabihf-ranlib \
  && mkdir -p /usr/arm-linux-gnueabihf/include /usr/arm-linux-gnueabihf/lib \
@@ -54,10 +65,12 @@ RUN git clone --depth 1 --branch 3.16 https://github.com/WiringPi/WiringPi.git /
  && ln -sf /usr/arm-linux-gnueabihf/lib/libwiringPiDev.so /usr/local/lib/libwiringPiDev.so \
  && ln -sf /usr/arm-linux-gnueabihf/lib/libwiringPi.so /opt/vc/lib/libwiringPi.so \
  && ln -sf /usr/arm-linux-gnueabihf/lib/libwiringPiDev.so /opt/vc/lib/libwiringPiDev.so \
- && rm -rf /tmp/WiringPi
+ && rm -rf /tmp/WiringPi; \
+    fi
 
 # Build and install pigpio library
-RUN git clone https://github.com/joan2937/pigpio.git /tmp/pigpio \
+RUN if [ "$INSTALL_PIGPIO" = "true" ]; then \
+    git clone https://github.com/joan2937/pigpio.git /tmp/pigpio \
  && cd /tmp/pigpio \
  && make CC=arm-linux-gnueabihf-gcc AR=arm-linux-gnueabihf-ar RANLIB=arm-linux-gnueabihf-ranlib STRIP=arm-linux-gnueabihf-strip lib \
  && mkdir -p /usr/arm-linux-gnueabihf/include /usr/arm-linux-gnueabihf/lib \
@@ -74,13 +87,16 @@ RUN git clone https://github.com/joan2937/pigpio.git /tmp/pigpio \
  && ln -sf /usr/arm-linux-gnueabihf/lib/libpigpio.so /usr/local/lib/libpigpio.so \
  && ln -sf /usr/arm-linux-gnueabihf/lib/libpigpiod_if.so /usr/local/lib/libpigpiod_if.so \
  && ln -sf /usr/arm-linux-gnueabihf/lib/libpigpiod_if2.so /usr/local/lib/libpigpiod_if2.so \
- && rm -rf /tmp/pigpio
+ && rm -rf /tmp/pigpio; \
+    fi
 
 # Install Crow header-only library (modular version for CMake compatibility)
-RUN git clone --depth 1 --branch v1.0+5 https://github.com/CrowCpp/Crow.git /tmp/crow \
+RUN if [ "$INSTALL_CROW" = "true" ]; then \
+    git clone --depth 1 --branch v1.0+5 https://github.com/CrowCpp/Crow.git /tmp/crow \
  && mkdir -p /usr/local/include/crow \
  && cp -r /tmp/crow/include/crow/* /usr/local/include/crow/ \
- && rm -rf /tmp/crow
+ && rm -rf /tmp/crow; \
+    fi
 
 # Set up cross-compilation environment variables
 ENV HOST=arm-linux-gnueabihf \
@@ -105,11 +121,17 @@ RUN mkdir -p $RPXC_ROOT/bin \
 ENV PATH=$RPXC_ROOT/bin:$PATH
 
 COPY image/ /
-COPY tgbot-cpp/ /
+COPY tgbot-cpp/ /tmp/tgbot-staging/
 
-# Link tgbot-cpp to ARM sysroot for cross-compilation
-RUN ln -sf /usr/local/include/tgbot /usr/arm-linux-gnueabihf/include/tgbot \
- && ln -sf /usr/local/lib/libTgBot.* /usr/arm-linux-gnueabihf/lib/ 2>/dev/null || true
+# Link tgbot-cpp to ARM sysroot for cross-compilation if INSTALL_TGBOT is true
+RUN if [ "$INSTALL_TGBOT" = "true" ]; then \
+        if [ -d /tmp/tgbot-staging/usr ]; then \
+            cp -r /tmp/tgbot-staging/* / \
+         && ln -sf /usr/local/include/tgbot /usr/arm-linux-gnueabihf/include/tgbot \
+         && find /usr/local/lib -name 'libTgBot.*' -exec ln -sf {} /usr/arm-linux-gnueabihf/lib/ \; 2>/dev/null || true; \
+        fi; \
+    fi \
+ && rm -rf /tmp/tgbot-staging
 
 WORKDIR /build
 ENTRYPOINT [ "/rpxc/entrypoint.sh" ]

@@ -1,0 +1,31 @@
+# Docker Cross-Compiler Build Configuration
+# Copy this file to build.conf and customize as needed
+# Source it before running build.sh: source build.conf && ./build.sh
+
+# Toggle library installation (true/false)
+export INSTALL_WIRINGPI=true
+export INSTALL_PIGPIO=true
+export INSTALL_CROW=true
+export INSTALL_SQLITE=true
+export INSTALL_TGBOT=true
+
+# Minimal build (only core libraries)
+# export INSTALL_WIRINGPI=false
+# export INSTALL_PIGPIO=false
+# export INSTALL_CROW=false
+# export INSTALL_SQLITE=false
+# export INSTALL_TGBOT=false
+
+# GPIO-only build
+# export INSTALL_WIRINGPI=true
+# export INSTALL_PIGPIO=true
+# export INSTALL_CROW=false
+# export INSTALL_SQLITE=false
+# export INSTALL_TGBOT=false
+
+# Web/Bot build (no GPIO)
+# export INSTALL_WIRINGPI=false
+# export INSTALL_PIGPIO=false
+# export INSTALL_CROW=true
+# export INSTALL_SQLITE=true
+# export INSTALL_TGBOT=true

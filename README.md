@@ -28,6 +28,7 @@ Perfect for building modern C++ projects like `tgbot-cpp` that require recent to
 * [Installation](#installation)
 * [Usage](#usage)
 * [Configuration](#configuration)
+* [Customizing Library Installation](#customizing-library-installation)
 * [Custom Images](#custom-images)
 * [Examples](#examples)
 
@@ -126,6 +127,90 @@ Default: djaprog/raspberry-pi-cross-compiler
 ### RPXC_ARGS / --args &lt;docker-run-args&gt;
 
 Extra arguments to pass to the `docker run` command.
+
+## Customizing Library Installation
+
+You can customize which libraries are included when building the Docker image using build arguments. This allows you to create minimal images with only the libraries you need.
+
+### Using Environment Variables
+
+Set environment variables before running `build.sh`:
+
+```bash
+# Build with only core libraries (no GPIO, no web frameworks)
+export INSTALL_WIRINGPI=false
+export INSTALL_PIGPIO=false
+export INSTALL_CROW=false
+export INSTALL_SQLITE=false
+export INSTALL_TGBOT=false
+./build.sh
+```
+
+### Using a Configuration File
+
+Copy the example configuration and customize it:
+
+```bash
+cp build.conf.example build.conf
+# Edit build.conf to enable/disable libraries
+source build.conf && ./build.sh
+```
+
+### Direct Docker Build Arguments
+
+```bash
+docker build \
+    --build-arg INSTALL_WIRINGPI=false \
+    --build-arg INSTALL_PIGPIO=false \
+    --build-arg INSTALL_CROW=true \
+    --build-arg INSTALL_SQLITE=true \
+    --build-arg INSTALL_TGBOT=true \
+    -t my-custom-image .
+```
+
+### Available Build Arguments
+
+| Argument | Default | Description |
+|----------|---------|-------------|
+| `INSTALL_WIRINGPI` | true | WiringPi GPIO library |
+| `INSTALL_PIGPIO` | true | pigpio GPIO library |
+| `INSTALL_CROW` | true | Crow web framework + ASIO |
+| `INSTALL_SQLITE` | true | SQLite3 database |
+| `INSTALL_TGBOT` | true | tgbot-cpp Telegram bot library |
+
+**Note:** Core libraries (Boost, OpenSSL, libcurl, zlib) are always installed.
+
+### Example Configurations
+
+**Minimal Build** (smallest image size):
+```bash
+export INSTALL_WIRINGPI=false
+export INSTALL_PIGPIO=false
+export INSTALL_CROW=false
+export INSTALL_SQLITE=false
+export INSTALL_TGBOT=false
+./build.sh
+```
+
+**GPIO-Only Build**:
+```bash
+export INSTALL_WIRINGPI=true
+export INSTALL_PIGPIO=true
+export INSTALL_CROW=false
+export INSTALL_SQLITE=false
+export INSTALL_TGBOT=false
+./build.sh
+```
+
+**Web/Bot Build** (no GPIO):
+```bash
+export INSTALL_WIRINGPI=false
+export INSTALL_PIGPIO=false
+export INSTALL_CROW=true
+export INSTALL_SQLITE=true
+export INSTALL_TGBOT=true
+./build.sh
+```
 
 ## Custom Images
 
